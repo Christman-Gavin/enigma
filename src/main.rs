@@ -27,13 +27,17 @@ struct Rotor {
 }
 
 impl Rotor {
-    fn new(char_list: CharList, notch: &str, turnover: &str, init_position: &str) -> Self {
-        validate(notch);
-        validate(turnover);
-        validate(init_position);
+    fn new(char_list: CharList, notch: char, turnover: char, init_position: char) -> Self {
+        validate_char(notch);
+        validate_char(turnover);
+        validate_char(init_position);
+
+        let times_to_shift = init_position as i32 - 39;
+
+        let shifted_slice = shift_slice_x_times(char_list, times_to_shift);
 
         let rotor: Rotor = Rotor {
-            char_list: char_list,
+            char_list: shifted_slice,
             notch: notch.to_string().to_uppercase(),
             turnover: turnover.to_string().to_uppercase(),
             current_position: init_position.to_string().to_ascii_uppercase(),
@@ -41,6 +45,12 @@ impl Rotor {
 
         return rotor;
     }
+
+    // TODO: implement
+    fn rotate() {}
+
+    // TODO: implement
+    fn get_rotor_response() {}
 }
 
 type Rotors = [Rotor; 3];
@@ -49,11 +59,6 @@ type UKW = CharList;
 struct RotorMachine {
     rotors: Rotors,
     ukw: UKW,
-}
-
-struct Enigma {
-    plugboard: EnigmaPlugboard,
-    rotor_machine: RotorMachine,
 }
 
 // array of char-to-char relations to
@@ -73,22 +78,16 @@ fn get_plugboard(plugboard_settings: PlugboardSettings) -> EnigmaPlugboard {
 }
 
 fn shift_slice_x_times(input: CharList, shifts: i32) -> CharList {
-    let times_to_shift = shifts % 26;
-
-    if times_to_shift == 0 {
-        return input;
-    }
-
     let mut input_copy = input;
 
-    let mut i: i32 = 0;
+    let mut current_index: i32 = 0;
 
     for val in input {
-        let new_index = (i + times_to_shift) % 26;
+        let new_index = (current_index + shifts) % 26;
 
         input_copy[new_index as usize] = val;
 
-        i += 1
+        current_index += 1
     }
 
     return input_copy;
@@ -108,10 +107,40 @@ fn plugboard_machine_map(input: char, plugboard: &EnigmaPlugboard) -> char {
 
 // This function is gonna suck fucking donkey-dick-balls
 fn get_rotor_machine_response(char: char, mut rotor_machine: &RotorMachine) -> char {
+    // first trip right-to-left
+
+    let mut index = 3;
+
+    while index > 0 {
+        // logic
+
+        let mut current_rotor: &Rotor = &rotor_machine.rotors[index as usize];
+
+        index -= 1;
+    }
+
+    // UKW response
+
+    // left-to-right
+
     return 'a';
 }
 
-fn validate(input: &str) -> () {
+fn validate_char(input: char) -> () {
+    let allowed_chars = vec![
+        'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R',
+        'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+    ];
+
+    if !allowed_chars.contains(&input) {
+        panic!(
+            "char not allowed: '{}' Please refer to documentation to see list of allowed chars",
+            input
+        );
+    }
+}
+
+fn validate(input: &str) {
     let allowed_chars = vec![
         'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R',
         'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
@@ -127,17 +156,22 @@ fn validate(input: &str) -> () {
     }
 }
 
-fn remove_whitespace(input: &str) -> String {
+// TODO: expand this function
+fn remove_uneeded(input: &str) -> String {
     let mut result = String::new();
-    let white_space = ' ';
 
     for (_, char) in input.chars().enumerate() {
-        if char != white_space {
+        if char != ' ' {
             result += &char.to_string()
         }
     }
 
     return result;
+}
+
+struct Enigma {
+    plugboard: EnigmaPlugboard,
+    rotor_machine: RotorMachine,
 }
 
 impl Enigma {
@@ -155,7 +189,7 @@ impl Enigma {
     fn cypher(self, to_encode: &str) -> String {
         let mut return_string = "".to_string();
 
-        let trimmed = remove_whitespace(to_encode);
+        let trimmed = remove_uneeded(to_encode);
 
         let ascii_uppercase = trimmed.to_ascii_uppercase();
 
@@ -193,11 +227,11 @@ fn main() {
         'G', 'A', 'K', 'M', 'U', 'S', 'Q', 'O',
     ];
 
-    let rotor_I = Rotor::new(first_char_list, "Y", "Q", "A");
+    let rotor_I = Rotor::new(first_char_list, 'Y', 'Q', 'A');
 
-    let rotor_II = Rotor::new(second_char_list, "M", "E", "A");
+    let rotor_II = Rotor::new(second_char_list, 'M', 'E', 'A');
 
-    let rotor_III = Rotor::new(third_char_list, "D", "V", "A");
+    let rotor_III = Rotor::new(third_char_list, 'D', 'V', 'A');
 
     let ukw: UKW = [
         'Y', 'R', 'U', 'H', 'Q', 'S', 'L', 'D', 'P', 'X', 'N', 'G', 'O', 'K', 'M', 'I', 'E', 'B',
@@ -212,23 +246,4 @@ fn main() {
     let res = enigma.cypher("Hello World");
 
     println!("{res}");
-
-    {
-        let slice: CharList = [
-            'A', 'J', 'D', 'K', 'S', 'I', 'R', 'U', 'X', 'B', 'L', 'H', 'W', 'T', 'M', 'C', 'Q',
-            'G', 'Z', 'N', 'P', 'Y', 'F', 'V', 'O', 'E',
-        ];
-
-        println!("{:?}", slice);
-
-        let now = Instant::now();
-
-        let new_slice = shift_slice_x_times(slice, 6);
-
-        let elapsed = now.elapsed();
-
-        println!("{:?}", new_slice);
-
-        println!("{:?}", elapsed);
-    }
 }
