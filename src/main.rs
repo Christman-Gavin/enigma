@@ -30,14 +30,12 @@ struct Rotor {
     current_position: char,
 }
 
-// TODO: need to make a right and left sided char map
 impl Rotor {
     fn new(char_list: CharList, notch: char, turnover: char, init_position: char) -> Self {
         validate_char(notch);
         validate_char(turnover);
         validate_char(init_position);
 
-        // TODO: Wtf is this, why is it 39?????????????????????????
         let times_to_shift = init_position as i32 - 39;
 
         let shifted_right_to_left_slice = shift_slice_x_times(char_list, times_to_shift);
@@ -185,8 +183,6 @@ pub struct RotorMachineResponse {
     rotor_machine: RotorMachine,
 }
 
-// TODO: this currently uses a right to left operation when we need to to a left to right
-//
 fn get_rotor_machine_response(
     char: char,
     rotor_machine: &mut RotorMachine,
@@ -257,13 +253,13 @@ fn validate(input: &str) {
     }
 }
 
-// TODO: expand this function
-// Should remove . ! ? and ,
 fn remove_uneeded(input: &str) -> String {
     let mut result = String::new();
 
+    let not_allowed_chars = vec!['!', ',', '?', ';', ':', '/', '=', '+', '_', '-'];
+
     for (_, char) in input.chars().enumerate() {
-        if char != ' ' {
+        if !not_allowed_chars.contains(&char) {
             result += &char.to_string()
         }
     }
