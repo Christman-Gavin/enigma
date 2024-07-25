@@ -17,16 +17,20 @@ use std::{char, collections::HashMap, time::Instant};
 
 // https://enigma.virtualcolossus.co.uk/technical.html
 
+// H
+
 type CharList = [char; 26];
 
 #[derive(Debug, Clone, Copy)]
 struct Rotor {
-    char_list: CharList,
+    right_to_left_char_list: CharList,
+    left_to_right_char_list: CharList,
     notch: char,
     turnover: char,
     current_position: char,
 }
 
+// TODO: need to make a right and left sided char map
 impl Rotor {
     fn new(char_list: CharList, notch: char, turnover: char, init_position: char) -> Self {
         validate_char(notch);
@@ -36,10 +40,22 @@ impl Rotor {
         // TODO: Wtf is this, why is it 39?????????????????????????
         let times_to_shift = init_position as i32 - 39;
 
-        let shifted_slice = shift_slice_x_times(char_list, times_to_shift);
+        let shifted_right_to_left_slice = shift_slice_x_times(char_list, times_to_shift);
+
+        let mut left_to_right_slice: CharList = [
+            '!', '!', '!', '!', '!', '!', '!', '!', '!', '!', '!', '!', '!', '!', '!', '!', '!',
+            '!', '!', '!', '!', '!', '!', '!', '!', '!',
+        ];
+
+        for (usize, char) in shifted_right_to_left_slice.iter().enumerate() {
+            let index = (*char as u8 - 65) as usize;
+
+            left_to_right_slice[index] = (usize as u8 + 65) as char;
+        }
 
         let rotor: Rotor = Rotor {
-            char_list: shifted_slice,
+            right_to_left_char_list: shifted_right_to_left_slice,
+            left_to_right_char_list: left_to_right_slice,
             notch,
             turnover,
             current_position: init_position,
@@ -54,7 +70,20 @@ impl Rotor {
         // update current position +1
         // update notch as [current position -1] as index
 
-        self.char_list = shift_slice_x_times(self.char_list, 1);
+        self.right_to_left_char_list = shift_slice_x_times(self.right_to_left_char_list, 1);
+
+        let mut left_to_right_slice: CharList = [
+            '!', '!', '!', '!', '!', '!', '!', '!', '!', '!', '!', '!', '!', '!', '!', '!', '!',
+            '!', '!', '!', '!', '!', '!', '!', '!', '!',
+        ];
+
+        for (usize, char) in self.right_to_left_char_list.iter().enumerate() {
+            let index = (*char as u8 - 65) as usize;
+
+            left_to_right_slice[index] = (usize as u8 + 65) as char;
+        }
+
+        self.left_to_right_char_list = left_to_right_slice;
 
         self.current_position = increase_position(self.current_position);
 
@@ -67,8 +96,12 @@ impl Rotor {
         }
     }
 
-    pub fn get_rotor_response(&self, char: char) -> char {
-        self.char_list[(char as u8 - 65) as usize]
+    pub fn get_right_to_left_rotor_response(&self, char: char) -> char {
+        self.right_to_left_char_list[(char as u8 - 65) as usize]
+    }
+
+    pub fn get_left_to_right_rotor_response(&self, char: char) -> char {
+        self.left_to_right_char_list[(char as u8 - 65) as usize]
     }
 }
 
@@ -100,15 +133,20 @@ fn decrease_position(current_position: char) -> char {
     f as char
 }
 
-fn get_plugboard(plugboard_settings: PlugboardSettings) -> EnigmaPlugboard {
-    let mut enigma_plugboard: EnigmaPlugboard = HashMap::new();
+fn get_plugboard(plugboard_settings: Option<PlugboardSettings>) -> Option<EnigmaPlugboard> {
+    match plugboard_settings {
+        Some(plugboard_settings) => {
+            let mut enigma_plugboard: EnigmaPlugboard = HashMap::new();
 
-    for (char_1, char_2) in plugboard_settings {
-        enigma_plugboard.insert(char_1, char_2);
-        enigma_plugboard.insert(char_2, char_1);
+            for (char_1, char_2) in plugboard_settings {
+                enigma_plugboard.insert(char_1, char_2);
+                enigma_plugboard.insert(char_2, char_1);
+            }
+
+            return Some(enigma_plugboard);
+        }
+        None => None,
     }
-
-    return enigma_plugboard;
 }
 
 fn shift_slice_x_times(mut input: CharList, shifts: i32) -> CharList {
@@ -125,12 +163,17 @@ fn shift_slice_x_times(mut input: CharList, shifts: i32) -> CharList {
     return input;
 }
 
-fn plugboard_machine_map(input: char, plugboard: &EnigmaPlugboard) -> char {
-    let plugboard_res = plugboard.get(&input);
+fn plugboard_machine_map(input: char, plugboard: &Option<EnigmaPlugboard>) -> char {
+    match plugboard {
+        Some(plugboard) => {
+            let plugboard_res = plugboard.get(&input);
 
-    match plugboard_res {
-        Some(found_plugboard_match) => *found_plugboard_match,
+            match plugboard_res {
+                Some(found_plugboard_match) => *found_plugboard_match,
 
+                None => input,
+            }
+        }
         None => input,
     }
 }
@@ -142,20 +185,20 @@ pub struct RotorMachineResponse {
     rotor_machine: RotorMachine,
 }
 
-// This function is gonna suck fucking donkey-dick-balls
+// TODO: this currently uses a right to left operation when we need to to a left to right
+//
 fn get_rotor_machine_response(
     char: char,
     rotor_machine: &mut RotorMachine,
 ) -> RotorMachineResponse {
-    // first trip right-to-left
     let mut current_response: char;
 
-    // Right to Left
-
+    // When a key is pressed, the first rotor rotates
     let need_to_rotate_next_rotor = rotor_machine.rotors[2].rotate();
 
-    current_response = rotor_machine.rotors[2].get_rotor_response(char);
+    current_response = rotor_machine.rotors[2].get_right_to_left_rotor_response(char);
 
+    // Rotate the next rotor if we've reached the turnover position
     if need_to_rotate_next_rotor {
         let need_to_rotate_next_rotor = rotor_machine.rotors[1].rotate();
 
@@ -164,13 +207,19 @@ fn get_rotor_machine_response(
         }
     }
 
+    current_response = rotor_machine.rotors[1].get_right_to_left_rotor_response(current_response);
+
+    current_response = rotor_machine.rotors[0].get_right_to_left_rotor_response(current_response);
+
+    // message enters UKW
     let ukw_response = rotor_machine.ukw[(current_response as u8 - 65) as usize];
 
-    current_response = rotor_machine.rotors[0].get_rotor_response(ukw_response);
+    // Message travels back through the rotors to the lightboard
+    current_response = rotor_machine.rotors[0].get_left_to_right_rotor_response(ukw_response);
 
-    current_response = rotor_machine.rotors[1].get_rotor_response(current_response);
+    current_response = rotor_machine.rotors[1].get_left_to_right_rotor_response(current_response);
 
-    current_response = rotor_machine.rotors[2].get_rotor_response(current_response);
+    current_response = rotor_machine.rotors[2].get_left_to_right_rotor_response(current_response);
 
     return RotorMachineResponse {
         rotor_machine: rotor_machine.clone(),
@@ -209,6 +258,7 @@ fn validate(input: &str) {
 }
 
 // TODO: expand this function
+// Should remove . ! ? and ,
 fn remove_uneeded(input: &str) -> String {
     let mut result = String::new();
 
@@ -222,12 +272,12 @@ fn remove_uneeded(input: &str) -> String {
 }
 
 struct Enigma {
-    plugboard: EnigmaPlugboard,
+    plugboard: Option<EnigmaPlugboard>,
     rotor_machine: RotorMachine,
 }
 
 impl Enigma {
-    fn new(plugboard_settings: PlugboardSettings, rotors: Rotors, ukw: UKW) -> Self {
+    fn new(plugboard_settings: Option<PlugboardSettings>, rotors: Rotors, ukw: UKW) -> Self {
         let plugboard = get_plugboard(plugboard_settings);
 
         let rotor_machine = RotorMachine { rotors, ukw };
@@ -250,13 +300,13 @@ impl Enigma {
         for char in ascii_uppercase.chars() {
             let first_plugboard_response = plugboard_machine_map(char, &self.plugboard);
 
-            let rotor_response =
+            let rotor_machine_response: RotorMachineResponse =
                 get_rotor_machine_response(first_plugboard_response, &mut self.rotor_machine);
 
-            self.rotor_machine = rotor_response.rotor_machine;
+            self.rotor_machine = rotor_machine_response.rotor_machine;
 
             let second_plugboard_response =
-                plugboard_machine_map(rotor_response.char, &self.plugboard);
+                plugboard_machine_map(rotor_machine_response.char, &self.plugboard);
 
             return_string += &(second_plugboard_response.to_string())
         }
@@ -268,8 +318,6 @@ impl Enigma {
 #[allow(non_snake_case)]
 fn main() {
     {
-        let now = Instant::now();
-
         let first_char_list: CharList = [
             'E', 'K', 'M', 'F', 'L', 'G', 'D', 'Q', 'V', 'Z', 'N', 'T', 'O', 'W', 'Y', 'H', 'X',
             'U', 'S', 'P', 'A', 'I', 'B', 'R', 'C', 'J',
@@ -302,16 +350,28 @@ fn main() {
         let plugboard_settings_1: PlugboardSettings =
             vec![('C', 'D'), ('R', 'T'), ('B', 'V'), ('X', 'P')];
 
-        let mut enigma1: Enigma =
-            Enigma::new(plugboard_settings_1, [rotor_I, rotor_II, rotor_III], ukw);
+        let plugboard_settings_2: PlugboardSettings =
+            vec![('C', 'D'), ('R', 'T'), ('B', 'V'), ('X', 'P')];
 
-        let res = enigma1.cypher("Hello World");
+        let mut enigma1: Enigma = Enigma::new(
+            Some(plugboard_settings_1),
+            [rotor_I, rotor_II, rotor_III],
+            ukw,
+        );
 
-        let elapsed = now.elapsed();
+        let mut enigma2: Enigma = Enigma::new(
+            Some(plugboard_settings_2),
+            [rotor_I, rotor_II, rotor_III],
+            ukw,
+        );
 
-        println!("{res}");
+        let cyphered = enigma1.cypher("To be or not to be that is the question wether tis nobler in truth to suffer the slings and arrows of woe or to take arms against a see of outrageous fortune");
 
-        println!("{:?}", elapsed);
+        println!("cyphered: {cyphered}");
+
+        let decyphered = enigma2.cypher(&cyphered);
+
+        println!("decyphcered: {decyphered}");
     }
 
     // {
