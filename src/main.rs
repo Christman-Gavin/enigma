@@ -256,7 +256,7 @@ fn validate(input: &str) {
 fn remove_uneeded(input: &str) -> String {
     let mut result = String::new();
 
-    let not_allowed_chars = vec!['!', ',', '?', ';', ':', '/', '=', '+', '_', '-'];
+    let not_allowed_chars = vec!['!', ',', '?', ';', ':', '/', '=', '+', '_', '-', ' '];
 
     for (_, char) in input.chars().enumerate() {
         if !not_allowed_chars.contains(&char) {
