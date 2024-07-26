@@ -1,4 +1,8 @@
-use std::{char, collections::HashMap, time::Instant};
+use std::{
+    char,
+    collections::HashMap,
+    time::{Duration, Instant},
+};
 
 // Rotor    ABCDEFGHIJKLMNOPQRSTUVWXYZ 	    Date-Introduced 	Model Name & Number
 
@@ -16,8 +20,6 @@ use std::{char, collections::HashMap, time::Instant};
 // UKW-B    YRUHQSLDPXNGOKMIEBFZCWVJAT
 
 // https://enigma.virtualcolossus.co.uk/technical.html
-
-// H
 
 type CharList = [char; 26];
 
@@ -64,10 +66,6 @@ impl Rotor {
 
     // returns true if the next rotor needs to rotate
     pub fn rotate(&mut self) -> bool {
-        // shift char_list
-        // update current position +1
-        // update notch as [current position -1] as index
-
         self.right_to_left_char_list = shift_slice_x_times(self.right_to_left_char_list, 1);
 
         let mut left_to_right_slice: CharList = [
@@ -112,7 +110,7 @@ struct RotorMachine {
     ukw: UKW,
 }
 
-// array of char-to-char relations to
+// array of char-to-char relations to turn into a hashmap
 type PlugboardSettings = Vec<(char, char)>;
 
 type EnigmaPlugboard = HashMap<char, char>;
@@ -175,8 +173,6 @@ fn plugboard_machine_map(input: char, plugboard: &Option<EnigmaPlugboard>) -> ch
         None => input,
     }
 }
-
-// fn get_rotor_result() -> char {}
 
 pub struct RotorMachineResponse {
     char: char,
@@ -256,7 +252,9 @@ fn validate(input: &str) {
 fn remove_uneeded(input: &str) -> String {
     let mut result = String::new();
 
-    let not_allowed_chars = vec!['!', ',', '?', ';', ':', '/', '=', '+', '_', '-', ' '];
+    let not_allowed_chars = vec![
+        '!', ',', '?', ';', ':', '/', '=', '+', '_', '-', ' ', '.', '\'',
+    ];
 
     for (_, char) in input.chars().enumerate() {
         if !not_allowed_chars.contains(&char) {
@@ -313,72 +311,59 @@ impl Enigma {
 
 #[allow(non_snake_case)]
 fn main() {
-    {
-        let first_char_list: CharList = [
-            'E', 'K', 'M', 'F', 'L', 'G', 'D', 'Q', 'V', 'Z', 'N', 'T', 'O', 'W', 'Y', 'H', 'X',
-            'U', 'S', 'P', 'A', 'I', 'B', 'R', 'C', 'J',
-        ];
+    let first_char_list: CharList = [
+        'E', 'K', 'M', 'F', 'L', 'G', 'D', 'Q', 'V', 'Z', 'N', 'T', 'O', 'W', 'Y', 'H', 'X', 'U',
+        'S', 'P', 'A', 'I', 'B', 'R', 'C', 'J',
+    ];
 
-        let second_char_list: CharList = [
-            'A', 'J', 'D', 'K', 'S', 'I', 'R', 'U', 'X', 'B', 'L', 'H', 'W', 'T', 'M', 'C', 'Q',
-            'G', 'Z', 'N', 'P', 'Y', 'F', 'V', 'O', 'E',
-        ];
+    let second_char_list: CharList = [
+        'A', 'J', 'D', 'K', 'S', 'I', 'R', 'U', 'X', 'B', 'L', 'H', 'W', 'T', 'M', 'C', 'Q', 'G',
+        'Z', 'N', 'P', 'Y', 'F', 'V', 'O', 'E',
+    ];
 
-        let third_char_list: CharList = [
-            'B', 'D', 'F', 'H', 'J', 'L', 'C', 'P', 'R', 'T', 'X', 'V', 'Z', 'N', 'Y', 'E', 'I',
-            'W', 'G', 'A', 'K', 'M', 'U', 'S', 'Q', 'O',
-        ];
+    let third_char_list: CharList = [
+        'B', 'D', 'F', 'H', 'J', 'L', 'C', 'P', 'R', 'T', 'X', 'V', 'Z', 'N', 'Y', 'E', 'I', 'W',
+        'G', 'A', 'K', 'M', 'U', 'S', 'Q', 'O',
+    ];
 
-        #[allow(non_snake_case)]
-        let rotor_I = Rotor::new(first_char_list, 'Y', 'Q', 'A');
+    #[allow(non_snake_case)]
+    let rotor_I = Rotor::new(first_char_list, 'Y', 'Q', 'A');
 
-        #[allow(non_snake_case)]
-        let rotor_II = Rotor::new(second_char_list, 'M', 'E', 'A');
+    #[allow(non_snake_case)]
+    let rotor_II = Rotor::new(second_char_list, 'M', 'E', 'A');
 
-        #[allow(non_snake_case)]
-        let rotor_III = Rotor::new(third_char_list, 'D', 'V', 'A');
+    #[allow(non_snake_case)]
+    let rotor_III = Rotor::new(third_char_list, 'D', 'V', 'A');
 
-        let ukw: UKW = [
-            'Y', 'R', 'U', 'H', 'Q', 'S', 'L', 'D', 'P', 'X', 'N', 'G', 'O', 'K', 'M', 'I', 'E',
-            'B', 'F', 'Z', 'C', 'W', 'V', 'J', 'A', 'T',
-        ];
+    let ukw: UKW = [
+        'Y', 'R', 'U', 'H', 'Q', 'S', 'L', 'D', 'P', 'X', 'N', 'G', 'O', 'K', 'M', 'I', 'E', 'B',
+        'F', 'Z', 'C', 'W', 'V', 'J', 'A', 'T',
+    ];
 
-        let plugboard_settings_1: PlugboardSettings =
-            vec![('C', 'D'), ('R', 'T'), ('B', 'V'), ('X', 'P')];
+    let plugboard_settings_1: PlugboardSettings =
+        vec![('C', 'D'), ('R', 'T'), ('B', 'V'), ('X', 'P')];
 
-        let plugboard_settings_2: PlugboardSettings =
-            vec![('C', 'D'), ('R', 'T'), ('B', 'V'), ('X', 'P')];
+    let mut enigma1: Enigma = Enigma::new(
+        Some(plugboard_settings_1),
+        [rotor_I, rotor_II, rotor_III],
+        ukw,
+    );
 
-        let mut enigma1: Enigma = Enigma::new(
-            Some(plugboard_settings_1),
-            [rotor_I, rotor_II, rotor_III],
-            ukw,
-        );
+    // "To be, or not to be, that is the question. Wether 'tis nobler in heart to suffer the slings and arrows of woe, or to take arms against a see of outrageous fortune. To live, to die, to live again."
+    let cyphered = enigma1.cypher("Hello World!");
 
-        let mut enigma2: Enigma = Enigma::new(
-            Some(plugboard_settings_2),
-            [rotor_I, rotor_II, rotor_III],
-            ukw,
-        );
+    let plugboard_settings_2: PlugboardSettings =
+        vec![('C', 'D'), ('R', 'T'), ('B', 'V'), ('X', 'P')];
 
-        let cyphered = enigma1.cypher("To be or not to be that is the question wether tis nobler in truth to suffer the slings and arrows of woe or to take arms against a see of outrageous fortune");
+    let mut enigma2: Enigma = Enigma::new(
+        Some(plugboard_settings_2),
+        [rotor_I, rotor_II, rotor_III],
+        ukw,
+    );
 
-        println!("cyphered: {cyphered}");
+    let decyphered = enigma2.cypher(&cyphered);
 
-        let decyphered = enigma2.cypher(&cyphered);
+    println!("cyphered: {cyphered}");
 
-        println!("decyphcered: {decyphered}");
-    }
-
-    // {
-    //     let plugboard_settings_2: PlugboardSettings =
-    //         vec![('C', 'D'), ('R', 'T'), ('B', 'V'), ('X', 'P')];
-
-    //     let mut enigma2: Enigma =
-    //         Enigma::new(plugboard_settings_2, [rotor_I, rotor_II, rotor_III], ukw);
-
-    //     let f = enigma2.cypher(&res);
-
-    //     println!("{f}")
-    // }
+    println!("decyphcered: {decyphered}");
 }
