@@ -1,4 +1,4 @@
-use std::{char, collections::HashMap};
+use std::time::SystemTime;
 
 // Rotor    ABCDEFGHIJKLMNOPQRSTUVWXYZ 	    Date-Introduced 	Model Name & Number
 
@@ -109,7 +109,7 @@ struct RotorMachine {
 // array of char-to-char relations to turn into a hashmap
 type PlugboardSettings = Vec<(char, char)>;
 
-type EnigmaPlugboard = HashMap<char, char>;
+type EnigmaPlugboard = [char; 26];
 
 fn increase_position(current_position: char) -> char {
     ((current_position as u8 - 63) % 26 + 64) as char
@@ -128,11 +128,14 @@ fn decrease_position(current_position: char) -> char {
 fn get_plugboard(plugboard_settings: Option<PlugboardSettings>) -> Option<EnigmaPlugboard> {
     match plugboard_settings {
         Some(plugboard_settings) => {
-            let mut enigma_plugboard: EnigmaPlugboard = HashMap::new();
+            let mut enigma_plugboard: EnigmaPlugboard = [
+                'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
+                'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+            ];
 
             for (char_1, char_2) in plugboard_settings {
-                enigma_plugboard.insert(char_1, char_2);
-                enigma_plugboard.insert(char_2, char_1);
+                enigma_plugboard[char_1 as usize - 65] = char_2;
+                enigma_plugboard[char_2 as usize - 65] = char_1;
             }
 
             return Some(enigma_plugboard);
@@ -158,13 +161,9 @@ fn shift_slice_x_times(mut input: CharList, shifts: i32) -> CharList {
 fn plugboard_machine_map(input: char, plugboard: &Option<EnigmaPlugboard>) -> char {
     match plugboard {
         Some(plugboard) => {
-            let plugboard_res = plugboard.get(&input);
+            let plugboard_res = plugboard[input as usize - 65];
 
-            match plugboard_res {
-                Some(found_plugboard_match) => *found_plugboard_match,
-
-                None => input,
-            }
+            return plugboard_res;
         }
         None => input,
     }
