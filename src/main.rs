@@ -104,7 +104,7 @@ struct RotorMachine {
     ukw: UKW,
 }
 
-// array of char-to-char relations to turn into a hashmap
+// Vector of char-to-char relations to turn into a hashmap
 type PlugboardSettings = Vec<(char, char)>;
 
 type EnigmaPlugboard = [char; 26];
@@ -207,7 +207,7 @@ fn get_rotor_machine_response(
     current_response = rotor_machine.rotors[2].get_left_to_right_rotor_response(current_response);
 
     return RotorMachineResponse {
-        rotor_machine: rotor_machine.clone(),
+        rotor_machine: *rotor_machine,
         char: current_response,
     };
 }
@@ -276,13 +276,13 @@ impl Enigma {
     }
 
     fn cypher(&mut self, to_encode: &str) -> String {
-        let mut return_string = "".to_string();
-
         let trimmed = remove_uneeded(to_encode);
 
         let ascii_uppercase = trimmed.to_ascii_uppercase();
 
         validate(&ascii_uppercase);
+
+        let mut return_string = "".to_string();
 
         for char in ascii_uppercase.chars() {
             let first_plugboard_response = plugboard_machine_map(char, &self.plugboard);
